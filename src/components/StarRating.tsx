@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface StarRatingProps {
-  rating: number;
+  rating?: number;
   maxRating?: number;
   size?: 'sm' | 'md' | 'lg';
   interactive?: boolean;
@@ -9,7 +9,7 @@ interface StarRatingProps {
 }
 
 const StarRating: React.FC<StarRatingProps> = ({
-  rating,
+  rating = 0,
   maxRating = 5,
   size = 'md',
   interactive = false,
@@ -41,7 +41,7 @@ const StarRating: React.FC<StarRatingProps> = ({
     }
   };
   
-  const currentRating = hoverRating !== null ? hoverRating : rating;
+  const currentRating = hoverRating !== null ? hoverRating : (rating || 0);
   
   return (
     <div className="flex items-center">
@@ -105,7 +105,7 @@ const StarRating: React.FC<StarRatingProps> = ({
         );
       })}
       {interactive ? null : (
-        <span className="ml-1 text-gray-600 text-sm">{rating.toFixed(1)}</span>
+        <span className="ml-1 text-gray-600 text-sm">{(rating || 0).toFixed(1)}</span>
       )}
     </div>
   );

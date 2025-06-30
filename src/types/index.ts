@@ -9,12 +9,13 @@ export interface App {
 
 export interface Review {
   id: string;
-  userName: string;
-  content: string;
-  score: number;
+  text: string;
+  rating?: number;
   date: string;
-  platform: 'ios' | 'android';
-  version: string;
+  author?: string;
+  platform?: 'ios' | 'android';
+  appVersion?: string;
+  helpful?: number;
 }
 
 export interface AppDetails {
@@ -29,11 +30,6 @@ export interface AppDetails {
   reviews: Review[];
   ratingCounts: Record<string, number>;
   themes: Theme[];
-  performanceRating: number;
-  uiRating: number;
-  stabilityRating: number;
-  featuresRating: number;
-  customerSupportRating: number;
 }
 
 export interface Theme {

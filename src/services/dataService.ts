@@ -20,40 +20,36 @@ interface AppStoreReview {
   date: string;
 }
 
-// Top 20 social media iOS apps by download volume in US App Store
+// Social media apps to include in the application
 const TOP_IOS_SOCIAL_APPS = [
   { id: '284882215', name: 'Facebook' },
-  { id: '389801252', name: 'Instagram' },
-  { id: '333903271', name: 'Twitter / X' },
   { id: '544007664', name: 'YouTube' },
-  { id: '447188370', name: 'Snapchat' },
-  { id: '835599320', name: 'TikTok' },
-  { id: '686449807', name: 'Messenger' },
   { id: '310633997', name: 'WhatsApp' },
+  { id: '447188370', name: 'Snapchat' },
+  { id: '333903271', name: 'Twitter / X' },
+  { id: '1640249531', name: 'Bluesky' },
+  { id: '686449807', name: 'Messenger' },
+  { id: '874139669', name: 'Signal' },
+  { id: '747648890', name: 'Telegram' },
+  { id: '835599320', name: 'TikTok' },
   { id: '288429040', name: 'Pinterest' },
-  { id: '454638411', name: 'Discord' },
-  { id: '512939461', name: 'Tumblr' },
-  { id: '547702041', name: 'Twitch' },
-  { id: '917932200', name: 'Clubhouse' },
-  { id: '1261944766', name: 'BeReal' },
-  { id: '530957474', name: 'WeChat' },
-  { id: '1077137248', name: 'Vimeo' },
-  { id: '1176027022', name: 'Reddit' },
-  { id: '422689480', name: 'Gmail' },
+  { id: '288337205', name: 'LinkedIn' }
 ];
 
-// Top 10 social media Android apps by download volume
+// Android versions of the same apps
 const TOP_ANDROID_SOCIAL_APPS = [
   { id: 'com.facebook.katana', name: 'Facebook' },
-  { id: 'com.instagram.android', name: 'Instagram' },
-  { id: 'com.twitter.android', name: 'Twitter / X' },
   { id: 'com.google.android.youtube', name: 'YouTube' },
-  { id: 'com.snapchat.android', name: 'Snapchat' },
-  { id: 'com.zhiliaoapp.musically', name: 'TikTok' },
-  { id: 'com.facebook.orca', name: 'Messenger' },
   { id: 'com.whatsapp', name: 'WhatsApp' },
+  { id: 'com.snapchat.android', name: 'Snapchat' },
+  { id: 'com.twitter.android', name: 'Twitter / X' },
+  { id: 'xyz.blueskyweb.app', name: 'Bluesky' },
+  { id: 'com.facebook.orca', name: 'Messenger' },
+  { id: 'org.thoughtcrime.securesms', name: 'Signal' },
+  { id: 'org.telegram.messenger', name: 'Telegram' },
+  { id: 'com.zhiliaoapp.musically', name: 'TikTok' },
   { id: 'com.pinterest', name: 'Pinterest' },
-  { id: 'com.discord', name: 'Discord' }
+  { id: 'com.linkedin.android', name: 'LinkedIn' }
 ];
 
 /**

@@ -75,7 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       <div className="flex-grow flex">
         {/* Sidebar with app list */}
-        <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
+        <div className="w-64 min-w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
           <div className="p-4">
             <div className="mb-4">
               <input
