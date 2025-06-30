@@ -26,13 +26,13 @@ ChartJS.register(
 );
 
 interface RatingChartProps {
-  ratings: Record<string, number>;
+  ratingCounts: Record<string, number>;
 }
 
-const RatingChart: React.FC<RatingChartProps> = ({ ratings }) => {
+const RatingChart: React.FC<RatingChartProps> = ({ ratingCounts }) => {
   // Create labels and data arrays
   const labels = ['1', '2', '3', '4', '5'];
-  const data = labels.map(rating => ratings[rating] || 0);
+  const data = labels.map(rating => ratingCounts[rating] || 0);
   
   // Calculate total reviews
   const totalReviews = data.reduce((sum, count) => sum + count, 0);

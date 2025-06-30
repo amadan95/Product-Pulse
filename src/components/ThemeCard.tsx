@@ -2,15 +2,19 @@ import React, { useState } from 'react';
 import { Theme, Review } from '../types';
 import ReviewCard from './ReviewCard';
 import DeepDive from './DeepDive';
+import Chat from './Chat';
 
 interface ThemeCardProps {
   theme: Theme;
   reviews: Review[];
+  appName: string;
+  appId: string;
 }
 
-const ThemeCard: React.FC<ThemeCardProps> = ({ theme, reviews }) => {
+const ThemeCard: React.FC<ThemeCardProps> = ({ theme, reviews, appName, appId }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDeepDive, setShowDeepDive] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   
   // Find the reviews associated with this theme
   const themeReviews = reviews.filter(review => 
@@ -78,12 +82,30 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ theme, reviews }) => {
             </svg>
           </button>
           
-          <button
-            onClick={() => setShowDeepDive(!showDeepDive)}
-            className="px-3 py-1 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
-          >
-            {showDeepDive ? 'Hide Insights' : 'Product Insights'}
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => {
+                setShowChat(!showChat);
+                setShowDeepDive(false);
+              }}
+              className="px-3 py-1 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 flex items-center"
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              {showChat ? 'Hide Chat' : 'Ask AI'}
+            </button>
+            
+            <button
+              onClick={() => {
+                setShowDeepDive(!showDeepDive);
+                setShowChat(false);
+              }}
+              className="px-3 py-1 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700"
+            >
+              {showDeepDive ? 'Hide Insights' : 'Product Insights'}
+            </button>
+          </div>
         </div>
       </div>
       
@@ -100,6 +122,12 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ theme, reviews }) => {
       
       {showDeepDive && (
         <DeepDive theme={theme} reviews={displayReviews} />
+      )}
+      
+      {showChat && (
+        <div className="border-t border-gray-200 p-4">
+          <Chat appName={appName} appId={appId} reviews={displayReviews} />
+        </div>
       )}
     </div>
   );

@@ -32,6 +32,7 @@ const DeepDive: React.FC<DeepDiveProps> = ({ theme, reviews }) => {
   const [productImplications, setProductImplications] = useState('');
   const [customerQuotes, setCustomerQuotes] = useState<{ quote: string; source: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchDeepDiveData = async () => {
@@ -106,11 +107,74 @@ const DeepDive: React.FC<DeepDiveProps> = ({ theme, reviews }) => {
     fetchDeepDiveData();
   }, [theme, reviews]);
   
+  const exportToGoogleDocs = () => {
+    // Format the content for Google Docs
+    const title = `${theme.name} - Product Insight Analysis`;
+    const content = `
+# ${title}
+## Theme: ${theme.name}
+Type: ${theme.type === 'pain' ? 'Pain Point' : 'Positive Feature'}
+Mentions: ${theme.reviewCount}
+Confidence: ${Math.round(theme.confidence * 100)}%
+
+## Quantitative Analysis
+${quantitativeAnalysis}
+
+## Qualitative Analysis
+${qualitativeAnalysis}
+
+## Root Cause Analysis
+${rootCauseAnalysis}
+
+## Product Implications
+${productImplications}
+
+## Supporting Evidence
+${customerQuotes.map(q => `"${q.quote}" - ${q.source}`).join('\n\n')}
+    `;
+    
+    // Create a Google Docs URL with prefilled content
+    const encodedContent = encodeURIComponent(content);
+    const googleDocsUrl = `https://docs.new?title=${encodeURIComponent(title)}&body=${encodedContent}`;
+    
+    // Open in a new tab
+    window.open(googleDocsUrl, '_blank');
+  };
+  
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mt-4">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">
-        {theme.name} - Product Insight Analysis
-      </h2>
+      <div className="flex justify-between items-start mb-4">
+        <h2 className="text-xl font-bold text-gray-900">
+          {theme.name} - Product Insight Analysis
+        </h2>
+        
+        <div className="relative">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </button>
+          
+          {dropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+              <div className="py-1">
+                <button
+                  onClick={exportToGoogleDocs}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                  </svg>
+                  Export to Google Docs
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       
       <div className="flex items-center mb-4">
         <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
