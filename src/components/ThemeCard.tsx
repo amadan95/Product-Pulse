@@ -42,6 +42,48 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ theme, reviews, appName, appId })
       appVersion: '2.1'
     }
   ];
+
+  // Determine sentiment color and icon
+  const getSentimentColor = () => {
+    const sentiment = theme.sentiment?.label || (theme.type === 'wow' ? 'positive' : 'negative');
+    switch (sentiment) {
+      case 'positive':
+        return 'text-green-500';
+      case 'negative':
+        return 'text-red-500';
+      default:
+        return 'text-yellow-500';
+    }
+  };
+
+  const getSentimentIcon = () => {
+    const sentiment = theme.sentiment?.label || (theme.type === 'wow' ? 'positive' : 'negative');
+    switch (sentiment) {
+      case 'positive':
+        return (
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 011.414-1.414L10 10.586l2.293-2.293a1 1 0 011.414 1.414z" clipRule="evenodd" />
+          </svg>
+        );
+      case 'negative':
+        return (
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+          </svg>
+        );
+    }
+  };
+  
+  // Format sentiment score as percentage
+  const sentimentScore = theme.sentiment?.score !== undefined 
+    ? Math.round((theme.sentiment.score + 1) * 50) // Convert -1 to 1 range to 0 to 100
+    : theme.type === 'wow' ? 75 : 25;
   
   return (
     <div className={`bg-white rounded-lg shadow-md mb-4 overflow-hidden ${
@@ -60,13 +102,23 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ theme, reviews, appName, appId })
               </span>
             </div>
           </div>
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-            theme.type === 'pain' 
-              ? 'bg-red-100 text-red-800' 
-              : 'bg-green-100 text-green-800'
-          }`}>
-            {theme.type === 'pain' ? 'Pain Point' : 'Positive'}
-          </span>
+          <div className="flex flex-col items-end">
+            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+              theme.type === 'pain' 
+                ? 'bg-red-100 text-red-800' 
+                : 'bg-green-100 text-green-800'
+            }`}>
+              {theme.type === 'pain' ? 'Pain Point' : 'Positive'}
+            </span>
+            <div className="flex items-center mt-2">
+              <div className={`flex items-center ${getSentimentColor()}`}>
+                {getSentimentIcon()}
+                <span className="ml-1 text-sm font-medium">
+                  {sentimentScore}% {theme.sentiment?.label || (theme.type === 'wow' ? 'positive' : 'negative')}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
         
         <p className="mt-2 text-gray-600">{theme.summary}</p>

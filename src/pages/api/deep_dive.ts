@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Together from "together-ai";
 import { Review, Theme } from '../../types';
+import { analyzeReviewSentiment } from '../../services/aiService';
 
 // Initialize Together AI client with default API key
 const API_KEY = process.env.TOGETHER_API_KEY || 'f31687ec345acab505a477a62273910be4d37c46c76383f17873cf6ff0a11b40';
@@ -13,8 +14,9 @@ type DeepDiveData = {
   quantitativeAnalysis: string;
   qualitativeAnalysis: string;
   rootCauseAnalysis: string;
-  productImplications: string;
-  customerQuotes: { quote: string; source: string }[];
+  userImpact: string;
+  productRecommendations: string;
+  supportingEvidence: string[];
 };
 
 // Helper function to ensure string values
@@ -40,28 +42,31 @@ const processAIResponse = (data: any, reviews: Review[]): DeepDiveData => {
     quantitativeAnalysis: ensureString(data.quantitativeAnalysis),
     qualitativeAnalysis: ensureString(data.qualitativeAnalysis),
     rootCauseAnalysis: ensureString(data.rootCauseAnalysis),
-    productImplications: ensureString(data.productImplications),
-    customerQuotes: []
+    userImpact: ensureString(data.userImpact || data.productImplications),
+    productRecommendations: ensureString(data.productRecommendations || ''),
+    supportingEvidence: []
   };
 
-  // Process customer quotes
-  if (Array.isArray(data.customerQuotes) && data.customerQuotes.length > 0) {
-    processed.customerQuotes = data.customerQuotes.map((quote: any) => ({
-      quote: ensureString(quote.quote),
-      source: ensureString(quote.source)
-    }));
+  // Process supporting evidence/customer quotes
+  if (Array.isArray(data.supportingEvidence) && data.supportingEvidence.length > 0) {
+    processed.supportingEvidence = data.supportingEvidence.map((quote: string) => ensureString(quote));
+  } else if (Array.isArray(data.customerQuotes) && data.customerQuotes.length > 0) {
+    // Convert old format to new format
+    processed.supportingEvidence = data.customerQuotes.map((quote: any) => {
+      const quoteText = ensureString(quote.quote);
+      const source = ensureString(quote.source);
+      return `${quoteText} (${source})`;
+    });
   } else {
     // If no quotes from AI, use actual reviews
     if (reviews.length > 0) {
-      processed.customerQuotes = reviews.slice(0, 5).map((review: Review) => ({
-        quote: review.text || "No review text available",
-        source: `${review.rating || 'N/A'}/5 stars, ${new Date(review.date).toLocaleDateString()}`
-      }));
+      processed.supportingEvidence = reviews.slice(0, 5).map((review: Review) => {
+        const reviewText = review.content || review.text || "No review text available";
+        const rating = review.score !== undefined ? review.score : (review.rating || 'N/A');
+        return `${reviewText} (${rating}/5 stars, ${new Date(review.date).toLocaleDateString()})`;
+      });
     } else {
-      processed.customerQuotes = [{ 
-        quote: "No customer quotes available", 
-        source: "System" 
-      }];
+      processed.supportingEvidence = ["No supporting evidence available"];
     }
   }
 
@@ -102,8 +107,13 @@ export default async function handler(
 async function generateAIInsights(theme: Theme, reviews: Review[]): Promise<DeepDiveData> {
   // Format reviews for the prompt
   const formattedReviews = reviews.slice(0, 15).map(review => 
-    `- Rating: ${review.rating || 'N/A'}/5, Date: ${new Date(review.date).toLocaleDateString()}\n  "${review.text}"`
+    `- Rating: ${review.score !== undefined ? review.score : (review.rating || 'N/A')}/5, Date: ${new Date(review.date).toLocaleDateString()}\n  "${review.content || review.text || "No review text"}"`
   ).join('\n\n');
+  
+  // Get sentiment information
+  const sentimentText = theme.sentiment 
+    ? `Sentiment score: ${theme.sentiment.score.toFixed(2)} (${theme.sentiment.label})`
+    : `Sentiment: ${theme.type === 'wow' ? 'positive' : 'negative'}`;
   
   // Create a comprehensive prompt for the LLM
   const prompt = `
@@ -115,6 +125,7 @@ async function generateAIInsights(theme: Theme, reviews: Review[]): Promise<Deep
     - Confidence: ${Math.round(theme.confidence * 100)}%
     - Number of reviews mentioning this: ${theme.reviewCount || reviews.length}
     - Summary: ${theme.summary}
+    - ${sentimentText}
     
     Here are some actual user reviews related to this theme:
     
@@ -128,13 +139,15 @@ async function generateAIInsights(theme: Theme, reviews: Review[]): Promise<Deep
     
     3. Root Cause Analysis: Technical and product reasons behind this theme, what might be causing these user experiences based on the reviews.
     
-    4. Product Implications: How this theme affects business metrics and user experience, including potential impact on retention, acquisition, and user satisfaction.
+    4. User Impact: How this theme affects users' experience with the app, including friction points, emotional responses, and behavioral changes.
     
-    5. Customer Quotes: Five most representative quotes from the reviews that illustrate this theme (include source).
+    5. Product Recommendations: Specific, actionable recommendations for the product team to address issues or capitalize on positive aspects.
     
-    Format the response as a JSON object with these keys: quantitativeAnalysis, qualitativeAnalysis, rootCauseAnalysis, productImplications, and customerQuotes (an array of objects with quote and source).
+    6. Supporting Evidence: Five most representative quotes from the reviews that illustrate this theme.
     
-    IMPORTANT: All fields must be simple strings, not nested objects. Do not include nested objects in any of the fields.
+    Format the response as a JSON object with these keys: quantitativeAnalysis, qualitativeAnalysis, rootCauseAnalysis, userImpact, productRecommendations, and supportingEvidence (an array of strings containing quotes).
+    
+    IMPORTANT: All fields must be simple strings or arrays of strings, not nested objects.
   `;
 
   const response = await together.chat.completions.create({
@@ -165,8 +178,8 @@ async function generateAIInsights(theme: Theme, reviews: Review[]): Promise<Deep
 function generateTemplateInsights(theme: Theme, reviews: Review[]): DeepDiveData {
   // Get average rating from relevant reviews
   const ratings = reviews
-    .filter(review => review.rating !== undefined && review.rating !== null)
-    .map(review => review.rating || 0);
+    .filter(review => (review.rating !== undefined && review.rating !== null) || (review.score !== undefined && review.score !== null))
+    .map(review => review.score !== undefined ? review.score : (review.rating || 0));
   
   const avgRatingNum = ratings.length > 0 
     ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
@@ -177,41 +190,41 @@ function generateTemplateInsights(theme: Theme, reviews: Review[]): DeepDiveData
     : "N/A";
   
   // Find representative reviews
-  const representativeReviews = reviews.slice(0, 5).map(review => ({
-    quote: review.text || "No review text available",
-    source: `${review.rating || 'N/A'}/5 stars, ${new Date(review.date).toLocaleDateString()}`
-  }));
+  const supportingEvidence = reviews.slice(0, 5).map(review => {
+    const reviewText = review.content || review.text || "No review text available";
+    const rating = review.score !== undefined ? review.score : (review.rating || 'N/A');
+    return `${reviewText} (${rating}/5 stars, ${new Date(review.date).toLocaleDateString()})`;
+  });
   
   // If no reviews available, create fallback quotes
-  const customerQuotes = representativeReviews.length > 0 ? representativeReviews : [
-    {
-      quote: `${theme.type === 'pain' ? `This is incredibly frustrating! The ${theme.name} issue makes me want to delete the app every time I encounter it.` : `The ${theme.name} feature is amazing! It's the main reason I use this app daily.`}`,
-      source: 'App Store Review',
-    },
-    {
-      quote: `${theme.type === 'pain' ? `I can't believe they haven't fixed the issues with ${theme.name}. It makes the app almost unusable for my daily needs.` : `Whoever designed the ${theme.name} functionality deserves a raise. It's intuitive and saves me so much time!`}`,
-      source: 'Google Play Review',
-    },
-    {
-      quote: `${theme.type === 'pain' ? `Every time I try to use ${theme.name}, the app slows down or crashes. This has been happening for months now.` : `The recent improvements to ${theme.name} have made this my go-to app. I've recommended it to all my friends.`}`,
-      source: 'In-App Feedback',
-    },
-  ];
+  if (supportingEvidence.length === 0) {
+    supportingEvidence.push(
+      `${theme.type === 'pain' ? `This is incredibly frustrating! The ${theme.name} issue makes me want to delete the app every time I encounter it.` : `The ${theme.name} feature is amazing! It's the main reason I use this app daily.`} (App Store Review)`,
+      `${theme.type === 'pain' ? `I can't believe they haven't fixed the issues with ${theme.name}. It makes the app almost unusable for my daily needs.` : `Whoever designed the ${theme.name} functionality deserves a raise. It's intuitive and saves me so much time!`} (Google Play Review)`,
+      `${theme.type === 'pain' ? `Every time I try to use ${theme.name}, the app slows down or crashes. This has been happening for months now.` : `The recent improvements to ${theme.name} have made this my go-to app. I've recommended it to all my friends.`} (In-App Feedback)`
+    );
+  }
+  
+  // Sentiment description based on theme type
+  const sentimentDesc = theme.sentiment?.label || (theme.type === 'wow' ? 'positive' : 'negative');
   
   // Fallback template insights
-  const quantitativeAnalysis = `The theme \"${theme.name}\" has a significant impact on user experience, affecting approximately ${theme.reviewCount || reviews.length} users. ${reviews.length > 0 ? `The average rating from users mentioning this theme is ${avgRating}/5, which is ${avgRatingNum > 3 ? 'above' : 'below'} the app's overall average.` : ''} This represents about ${Math.round(theme.confidence * 100)}% of our user base and is a key driver of ${theme.type === 'pain' ? 'negative' : 'positive'} sentiment.`;
+  const quantitativeAnalysis = `The theme \"${theme.name}\" has a significant impact on user experience, affecting approximately ${theme.reviewCount || reviews.length} users. ${reviews.length > 0 ? `The average rating from users mentioning this theme is ${avgRating}/5, which is ${avgRatingNum > 3 ? 'above' : 'below'} the app's overall average.` : ''} This represents about ${Math.round(theme.confidence * 100)}% of our user base and is a key driver of ${sentimentDesc} sentiment.`;
   
   const qualitativeAnalysis = `Users ${theme.type === 'pain' ? 'frequently express frustration' : 'consistently praise'} the \"${theme.name}\" aspect of the app. ${theme.type === 'pain' ? 'The issue often leads to app abandonment and negative word-of-mouth. It appears to be a major friction point in the user journey, hindering the app\'s core functionality.' : 'This feature significantly enhances user satisfaction and is frequently mentioned as a reason for continued use. Users particularly appreciate how it streamlines their workflow and integrates with their daily activities.'}`;
   
   const rootCauseAnalysis = `The underlying cause of this ${theme.type === 'pain' ? 'issue' : 'positive feedback'} appears to be related to ${theme.type === 'pain' ? 'technical limitations in our current architecture. Based on user reports, the app is attempting to process large data sets on the client side, leading to performance bottlenecks. Additionally, the UI design doesn\'t provide adequate feedback during processing operations.' : 'our recent redesign of the user flow and optimization of backend processes. The implementation of asynchronous data loading and improved caching mechanisms has significantly enhanced the user experience.'}`;
   
-  const productImplications = `This ${theme.type === 'pain' ? 'issue' : 'feature'} has ${theme.type === 'pain' ? 'significant negative' : 'substantial positive'} implications for our product strategy. ${theme.type === 'pain' ? 'It\'s affecting user retention metrics, with a noticeable increase in churn rate among users who encounter this problem. It also impacts our App Store ratings, potentially reducing new user acquisition.' : 'It\'s driving higher engagement metrics, with users who utilize this feature showing longer session times and higher retention rates. It\'s becoming a key differentiator against competitors in the market.'}`;
+  const userImpact = `This ${theme.type === 'pain' ? 'issue' : 'feature'} has ${theme.type === 'pain' ? 'significant negative' : 'substantial positive'} implications for our users. ${theme.type === 'pain' ? 'Users report feeling frustrated and annoyed when encountering this problem, leading to reduced satisfaction and trust in the app. Some users have reported abandoning tasks or switching to competitor apps.' : 'Users express delight and satisfaction when using this feature, noting increased productivity and enjoyment. It creates moments of positive emotional connection with the brand and encourages continued usage.'}`;
+
+  const productRecommendations = `Based on the analysis, we recommend the following actions: ${theme.type === 'pain' ? '1) Prioritize fixing the underlying technical issues causing this problem, 2) Improve error handling and user communication when the issue occurs, 3) Consider a temporary workaround or alternative flow until a permanent solution is implemented, 4) Follow up with affected users after the fix is deployed.' : '1) Highlight this feature more prominently in marketing materials and onboarding, 2) Consider expanding the functionality based on user suggestions, 3) Use this as a model for developing other features, 4) Gather additional user feedback to identify potential improvements.'}`;
 
   return { 
     quantitativeAnalysis, 
     qualitativeAnalysis, 
     rootCauseAnalysis,
-    productImplications,
-    customerQuotes 
+    userImpact,
+    productRecommendations,
+    supportingEvidence 
   };
 }

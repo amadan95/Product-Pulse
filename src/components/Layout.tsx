@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { App } from '../types';
 import { fetchApps } from '../services/reviewService';
+import FloatingChat from './FloatingChat';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -129,6 +130,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </p>
         </div>
       </footer>
+
+      {/* Floating Chat Component */}
+      <FloatingChat />
     </div>
   );
 };

@@ -58,11 +58,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Fetch app reviews based on platform and appId
     const reviews = await fetchAppReviews(appId);
     
-    if (!reviews || reviews.length === 0) {
+    // Ensure consistent field names for all reviews
+    const normalizedReviews = reviews.map(review => ({
+      id: review.id,
+      text: review.text || review.content || '',
+      content: review.content || review.text || '',
+      rating: review.rating !== undefined ? review.rating : review.score,
+      score: review.score !== undefined ? review.score : review.rating,
+      date: review.date,
+      author: review.author || review.userName || 'Anonymous User',
+      userName: review.userName || review.author || 'Anonymous User',
+      platform: review.platform || platform,
+      appVersion: review.appVersion || review.version || 'Unknown version',
+      version: review.version || review.appVersion || 'Unknown version',
+      helpful: review.helpful || 0
+    }));
+    
+    if (!normalizedReviews || normalizedReviews.length === 0) {
       return res.status(404).json({ error: `No reviews found for ${appId} on ${platform}` });
     }
     
-    res.status(200).json(reviews);
+    res.status(200).json(normalizedReviews);
   } catch (error) {
     console.error(`Error fetching reviews for ${appId}:`, error);
     res.status(500).json({ error: 'Failed to fetch reviews' });

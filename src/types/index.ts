@@ -9,13 +9,19 @@ export interface App {
 
 export interface Review {
   id: string;
-  text: string;
+  text?: string;
+  content?: string;
   rating?: number;
+  score?: number;
   date: string;
   author?: string;
+  userName?: string;
   platform?: 'ios' | 'android';
   appVersion?: string;
+  version?: string;
   helpful?: number;
+  appName?: string;
+  appId?: string;
 }
 
 export interface AppDetails {
@@ -40,6 +46,10 @@ export interface Theme {
   reviewCount: number;
   summary: string;
   reviews: string[];
+  sentiment: {
+    score: number; // -1 to 1 range, where -1 is very negative, 0 is neutral, and 1 is very positive
+    label: 'negative' | 'neutral' | 'positive';
+  };
 }
 
 export interface ChartData {

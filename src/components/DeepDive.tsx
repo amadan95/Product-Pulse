@@ -1,38 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { Theme, Review } from '../types';
+import ReviewCard from './ReviewCard';
 
 interface DeepDiveProps {
   theme: Theme;
   reviews: Review[];
 }
 
-// Helper function to safely render potentially complex data
-const safeRender = (content: any): string => {
-  if (typeof content === 'string') {
-    return content;
-  } else if (content === null || content === undefined) {
-    return '';
-  } else if (typeof content === 'object') {
-    try {
-      // Try to convert the object to a formatted string
-      return Object.entries(content)
-        .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
-        .join('\n\n');
-    } catch (e) {
-      return JSON.stringify(content);
-    }
-  }
-  return String(content);
-};
+interface DeepDiveData {
+  quantitativeAnalysis: string;
+  qualitativeAnalysis: string;
+  rootCauseAnalysis: string;
+  userImpact: string;
+  productRecommendations: string;
+  supportingEvidence: string[];
+}
 
 const DeepDive: React.FC<DeepDiveProps> = ({ theme, reviews }) => {
-  const [quantitativeAnalysis, setQuantitativeAnalysis] = useState('');
-  const [qualitativeAnalysis, setQualitativeAnalysis] = useState('');
-  const [rootCauseAnalysis, setRootCauseAnalysis] = useState('');
-  const [productImplications, setProductImplications] = useState('');
-  const [customerQuotes, setCustomerQuotes] = useState<{ quote: string; source: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [quantitativeAnalysis, setQuantitativeAnalysis] = useState<string>('');
+  const [qualitativeAnalysis, setQualitativeAnalysis] = useState<string>('');
+  const [rootCauseAnalysis, setRootCauseAnalysis] = useState<string>('');
+  const [userImpact, setUserImpact] = useState<string>('');
+  const [productRecommendations, setProductRecommendations] = useState<string>('');
+  const [supportingEvidence, setSupportingEvidence] = useState<string[]>([]);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // Helper function to safely render text that might contain HTML-like content
+  const safeRender = (text: string) => {
+    if (!text) return '';
+    return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  };
 
   useEffect(() => {
     const fetchDeepDiveData = async () => {
@@ -54,121 +52,110 @@ const DeepDive: React.FC<DeepDiveProps> = ({ theme, reviews }) => {
         setQuantitativeAnalysis(safeRender(data.quantitativeAnalysis));
         setQualitativeAnalysis(safeRender(data.qualitativeAnalysis));
         setRootCauseAnalysis(safeRender(data.rootCauseAnalysis));
-        setProductImplications(safeRender(data.productImplications));
+        setUserImpact(safeRender(data.userImpact));
+        setProductRecommendations(safeRender(data.productRecommendations));
         
-        // Handle customer quotes
-        if (Array.isArray(data.customerQuotes)) {
-          setCustomerQuotes(data.customerQuotes.map((quote: any) => ({
-            quote: typeof quote.quote === 'string' ? quote.quote : JSON.stringify(quote.quote),
-            source: typeof quote.source === 'string' ? quote.source : JSON.stringify(quote.source)
-          })));
-        } else if (typeof data.customerQuotes === 'object') {
-          // Handle case where customerQuotes might be an object instead of array
-          setCustomerQuotes([{
-            quote: "Customer quotes format error",
-            source: "System"
-          }]);
-        }
-        
-        // If no quotes were returned or there was an error, use the actual reviews as quotes
-        if (customerQuotes.length === 0 && themeReviews.length > 0) {
-          const reviewQuotes = themeReviews.slice(0, 5).map(review => ({
-            quote: review.text || "No review text",
-            source: `Review ${review.id}`
-          }));
-          setCustomerQuotes(reviewQuotes);
+        // Process supporting evidence
+        if (data.supportingEvidence && Array.isArray(data.supportingEvidence)) {
+          setSupportingEvidence(data.supportingEvidence.map((quote: string) => safeRender(quote)));
+        } else {
+          // Fallback: Create supporting evidence from actual reviews
+          const fallbackEvidence = themeReviews
+            .slice(0, 3)
+            .map(review => {
+              const reviewText = review.content || review.text || '';
+              return reviewText.length > 20 ? reviewText : '';
+            })
+            .filter(text => text !== ''); // Filter out empty strings
+          
+          setSupportingEvidence(fallbackEvidence.length > 0 ? fallbackEvidence : ['No supporting evidence available']);
         }
       } catch (error) {
         console.error('Error fetching deep dive data:', error);
         setQuantitativeAnalysis('Error loading analysis');
         setQualitativeAnalysis('Error loading analysis');
         setRootCauseAnalysis('Error loading analysis');
-        setProductImplications('Error loading analysis');
-        
-        // Use the actual reviews as quotes if there was an error
-        const themeReviews = reviews.filter(review => theme.reviews.includes(review.id));
-        if (themeReviews.length > 0) {
-          const reviewQuotes = themeReviews.slice(0, 5).map(review => ({
-            quote: review.text || "No review text",
-            source: `Review ${review.id}`
-          }));
-          setCustomerQuotes(reviewQuotes);
-        } else {
-          setCustomerQuotes([{
-            quote: "Error loading customer quotes",
-            source: "System"
-          }]);
-        }
+        setUserImpact('Error loading analysis');
+        setProductRecommendations('Error loading analysis');
+        setSupportingEvidence(['Error loading supporting evidence']);
       } finally {
         setIsLoading(false);
       }
     };
-
+    
     fetchDeepDiveData();
   }, [theme, reviews]);
-  
-  const exportToGoogleDocs = () => {
-    // Format the content for Google Docs
-    const title = `${theme.name} - Product Insight Analysis`;
+
+  const handleExportToGoogleDocs = () => {
+    // Create a formatted document content
     const content = `
-# ${title}
-## Theme: ${theme.name}
-Type: ${theme.type === 'pain' ? 'Pain Point' : 'Positive Feature'}
-Mentions: ${theme.reviewCount}
-Confidence: ${Math.round(theme.confidence * 100)}%
-
-## Quantitative Analysis
-${quantitativeAnalysis}
-
-## Qualitative Analysis
-${qualitativeAnalysis}
-
-## Root Cause Analysis
-${rootCauseAnalysis}
-
-## Product Implications
-${productImplications}
-
-## Supporting Evidence
-${customerQuotes.map(q => `"${q.quote}" - ${q.source}`).join('\n\n')}
+      # Product Insight: ${theme.name}
+      
+      ## Theme Overview
+      ${theme.summary}
+      
+      ## Sentiment Analysis
+      Score: ${theme.sentiment?.score.toFixed(2) || 'N/A'} (${theme.sentiment?.label || 'N/A'})
+      
+      ## Quantitative Analysis
+      ${quantitativeAnalysis}
+      
+      ## Qualitative Analysis
+      ${qualitativeAnalysis}
+      
+      ## Root Cause Analysis
+      ${rootCauseAnalysis}
+      
+      ## User Impact
+      ${userImpact}
+      
+      ## Product Recommendations
+      ${productRecommendations}
+      
+      ## Supporting Evidence
+      ${supportingEvidence.map(quote => `- "${quote}"`).join('\n')}
     `;
     
-    // Create a Google Docs URL with prefilled content
-    const encodedContent = encodeURIComponent(content);
-    const googleDocsUrl = `https://docs.new?title=${encodeURIComponent(title)}&body=${encodedContent}`;
+    // Create a blob with the content
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
     
-    // Open in a new tab
-    window.open(googleDocsUrl, '_blank');
+    // Create a download link and trigger it
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${theme.name.replace(/\s+/g, '-')}-product-insight.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Close the export menu
+    setShowExportMenu(false);
   };
-  
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mt-4">
-      <div className="flex justify-between items-start mb-4">
-        <h2 className="text-xl font-bold text-gray-900">
-          {theme.name} - Product Insight Analysis
-        </h2>
-        
+    <div className="border-t border-gray-200 bg-white p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Product Insights</h3>
         <div className="relative">
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="p-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+          <button 
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            className="px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 flex items-center"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
             </svg>
+            Export
           </button>
           
-          {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+          {showExportMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
               <div className="py-1">
                 <button
-                  onClick={exportToGoogleDocs}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  onClick={handleExportToGoogleDocs}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                  </svg>
-                  Export to Google Docs
+                  Export to Text File
                 </button>
               </div>
             </div>
@@ -176,54 +163,93 @@ ${customerQuotes.map(q => `"${q.quote}" - ${q.source}`).join('\n\n')}
         </div>
       </div>
       
-      <div className="flex items-center mb-4">
-        <span className="text-sm font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-          {theme.reviewCount} mentions
-        </span>
-        <span className="ml-2 text-sm text-gray-500">
-          ({Math.round(theme.confidence * 100)}% confidence)
-        </span>
-      </div>
-      
       {isLoading ? (
-        <div className="flex justify-center items-center h-40">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Sentiment Analysis Section */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Quantitative Analysis</h3>
-            <p className="text-gray-600 whitespace-pre-line">{quantitativeAnalysis}</p>
+            <h4 className="text-md font-medium text-gray-800 mb-2">Sentiment Analysis</h4>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="flex items-center mb-2">
+                <div 
+                  className={`w-full bg-gray-200 rounded-full h-4 ${
+                    theme.sentiment?.label === 'positive' ? 'bg-green-100' : 
+                    theme.sentiment?.label === 'negative' ? 'bg-red-100' : 'bg-yellow-100'
+                  }`}
+                >
+                  <div 
+                    className={`h-4 rounded-full ${
+                      theme.sentiment?.label === 'positive' ? 'bg-green-500' : 
+                      theme.sentiment?.label === 'negative' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`} 
+                    style={{ 
+                      width: `${theme.sentiment?.score !== undefined 
+                        ? Math.round((theme.sentiment.score + 1) * 50) 
+                        : theme.type === 'wow' ? 75 : 25}%` 
+                    }}
+                  ></div>
+                </div>
+                <span className="ml-3 text-sm font-medium">
+                  {theme.sentiment?.score !== undefined 
+                    ? `${Math.round((theme.sentiment.score + 1) * 50)}%` 
+                    : theme.type === 'wow' ? '75%' : '25%'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-600">
+                User sentiment is <strong>{theme.sentiment?.label || (theme.type === 'wow' ? 'positive' : 'negative')}</strong>. 
+                {theme.sentiment?.label === 'positive' && 'Users are generally satisfied with this aspect.'}
+                {theme.sentiment?.label === 'negative' && 'Users are expressing frustration with this aspect.'}
+                {theme.sentiment?.label === 'neutral' && 'Users have mixed feelings about this aspect.'}
+              </p>
+            </div>
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Qualitative Analysis</h3>
-            <p className="text-gray-600 whitespace-pre-line">{qualitativeAnalysis}</p>
+            <h4 className="text-md font-medium text-gray-800 mb-2">Quantitative Analysis</h4>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: quantitativeAnalysis }}></p>
+            </div>
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Root Cause Analysis</h3>
-            <p className="text-gray-600 whitespace-pre-line">{rootCauseAnalysis}</p>
+            <h4 className="text-md font-medium text-gray-800 mb-2">Qualitative Analysis</h4>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: qualitativeAnalysis }}></p>
+            </div>
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Product Implications</h3>
-            <p className="text-gray-600 whitespace-pre-line">{productImplications}</p>
+            <h4 className="text-md font-medium text-gray-800 mb-2">Root Cause Analysis</h4>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: rootCauseAnalysis }}></p>
+            </div>
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Supporting Evidence</h3>
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {customerQuotes && customerQuotes.length > 0 ? (
-                customerQuotes.map((quote, index) => (
-                  <div key={index} className="border-l-4 border-indigo-500 pl-4">
-                    <p className="text-gray-600 italic">"{quote.quote}"</p>
-                    <p className="text-sm text-gray-500 mt-1">- {quote.source}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 italic">No specific reviews available for this theme.</p>
-              )}
+            <h4 className="text-md font-medium text-gray-800 mb-2">User Impact</h4>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: userImpact }}></p>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-md font-medium text-gray-800 mb-2">Product Recommendations</h4>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <p className="text-sm text-gray-600" dangerouslySetInnerHTML={{ __html: productRecommendations }}></p>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-md font-medium text-gray-800 mb-2">Supporting Evidence</h4>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <ul className="list-disc pl-5 space-y-2">
+                {supportingEvidence.map((quote, index) => (
+                  <li key={index} className="text-sm text-gray-600">"{quote}"</li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>

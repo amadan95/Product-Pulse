@@ -64,6 +64,9 @@
   padding: 15px;
   text-align: center;
   font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .chatMessages {
@@ -92,8 +95,76 @@
 .bot {
   align-self: flex-start;
   background-color: #f3f4f6;
-  color: #1f2937;
+  color: #000000;
   border-bottom-left-radius: 4px;
+}
+
+/* Markdown styling */
+.bot :global(.markdown-body) {
+  font-family: inherit;
+  line-height: 1.5;
+  color: #000000;
+}
+
+.bot :global(.markdown-body h1) {
+  font-size: 1.5rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.bot :global(.markdown-body h2) {
+  font-size: 1.25rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.bot :global(.markdown-body h3) {
+  font-size: 1.125rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.bot :global(.markdown-body ul),
+.bot :global(.markdown-body ol) {
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.bot :global(.markdown-body li) {
+  margin-bottom: 0.25rem;
+}
+
+.bot :global(.markdown-body p) {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.bot :global(.markdown-body code) {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.bot :global(.markdown-body pre) {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.5rem;
+  border-radius: 3px;
+  overflow-x: auto;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.bot :global(.markdown-body blockquote) {
+  border-left: 4px solid #ddd;
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  color: #000000;
 }
 
 .chatInputContainer {
@@ -109,6 +180,11 @@
   border-radius: 20px;
   margin-right: 10px;
   outline: none;
+  color: #000000;
+}
+
+.chatInputContainer input::placeholder {
+  color: #6b7280;
 }
 
 .chatInputContainer button {
@@ -122,4 +198,13 @@
 
 .chatInputContainer button:hover {
   background-color: #4338ca;
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .chatWindow {
+    width: calc(100vw - 40px);
+    right: 0;
+    bottom: 70px;
+  }
 }
