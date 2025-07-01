@@ -117,9 +117,11 @@ async function generateAIInsights(theme: Theme, reviews: Review[]): Promise<Deep
   
   // Create a comprehensive prompt for the LLM
   const prompt = `
-    Generate in-depth product insights for the theme "${theme.name}" which is classified as a ${theme.type === 'pain' ? 'pain point' : 'positive feature'} in our app.
+    # User Friction Analysis Deep Dive
+
+    Analyze the following user reviews for the theme "${theme.name}" which is classified as a ${theme.type === 'pain' ? 'pain point' : 'positive feature'} in our app.
     
-    Theme details:
+    ## Theme details:
     - Name: ${theme.name}
     - Type: ${theme.type} (${theme.type === 'pain' ? 'negative user feedback' : 'positive user feedback'})
     - Confidence: ${Math.round(theme.confidence * 100)}%
@@ -127,25 +129,74 @@ async function generateAIInsights(theme: Theme, reviews: Review[]): Promise<Deep
     - Summary: ${theme.summary}
     - ${sentimentText}
     
-    Here are some actual user reviews related to this theme:
+    ## User Reviews:
     
     ${formattedReviews || "No specific reviews available for this theme."}
     
-    Based on these real user reviews, provide the following sections:
+    ## Analysis Framework
+
+    Based on these user reviews, provide a comprehensive analysis in the following sections:
+
+    ### 1. Quantitative Analysis
+    - **Friction Impact Metrics**: Number of reviews mentioning this friction point, percentage of total reviews affected
+    - **Rating Correlation**: Average rating of reviews mentioning this issue vs. overall average rating
+    - **Severity Assessment**: Frequency distribution (how often users mention this as primary vs. secondary concern)
+    - **Trend Analysis**: Whether mentions of this friction are increasing, decreasing, or stable over time
+    - **User Segment Impact**: Which user types or use cases are most affected
+
+    ### 2. Qualitative Analysis
+    - **User Experience Journey**: Where in the user journey this friction typically occurs
+    - **Emotional Impact**: User sentiment and frustration levels expressed in reviews
+    - **Context and Triggers**: Specific situations or conditions that amplify this friction
+    - **User Workarounds**: How users are currently trying to solve or work around this issue
+    - **Expectation Gaps**: What users expected vs. what they experienced
+
+    ### 3. Root Cause Analysis
+    - **Product Design Issues**: UI/UX design elements contributing to friction
+    - **Technical Limitations**: Backend, performance, or architectural constraints
+    - **Feature Gaps**: Missing functionality or capabilities
+    - **Process Inefficiencies**: Workflow or user journey bottlenecks
+    - **Communication Failures**: Unclear messaging, instructions, or feedback
+
+    ### 4. User Impact Assessment
+    - **Immediate Friction**: Direct usability problems and task completion barriers
+    - **Behavioral Changes**: How users modify their behavior to cope with the issue
+    - **Retention Risk**: Likelihood of users abandoning the product due to this friction
+    - **Advocacy Impact**: Effect on user recommendations and word-of-mouth
+    - **Value Realization**: How this friction prevents users from achieving their goals
+
+    ### 5. Product Recommendations
+    - **High-Priority Fixes**: Critical issues requiring immediate attention
+    - **Design Improvements**: Specific UI/UX enhancements to reduce friction
+    - **Feature Enhancements**: New capabilities or improvements to existing features
+    - **Process Optimizations**: Workflow simplifications and journey improvements
+    - **Communication Improvements**: Better user guidance, onboarding, or error messaging
+    - **Success Metrics**: How to measure improvement once changes are implemented
+
+    ### 6. Supporting Evidence
+    Provide the 5 most representative user quotes that illustrate this friction point, showing the range of user experiences and the specific language users employ to describe their challenges.
+
+    ## Output Format
+
+    Format your response as a JSON object with the following structure:
     
-    1. Quantitative Analysis: Data-driven insights about the impact of this theme on users, including patterns in ratings, frequency of mentions, and trends over time.
-    
-    2. Qualitative Analysis: Deeper understanding of how users experience this theme, including common sentiments, specific user pain points or delights, and contextual factors.
-    
-    3. Root Cause Analysis: Technical and product reasons behind this theme, what might be causing these user experiences based on the reviews.
-    
-    4. User Impact: How this theme affects users' experience with the app, including friction points, emotional responses, and behavioral changes.
-    
-    5. Product Recommendations: Specific, actionable recommendations for the product team to address issues or capitalize on positive aspects.
-    
-    6. Supporting Evidence: Five most representative quotes from the reviews that illustrate this theme.
-    
-    Format the response as a JSON object with these keys: quantitativeAnalysis, qualitativeAnalysis, rootCauseAnalysis, userImpact, productRecommendations, and supportingEvidence (an array of strings containing quotes).
+    {
+      "quantitativeAnalysis": "String containing all quantitative insights and metrics",
+      "qualitativeAnalysis": "String containing qualitative insights about user experience",
+      "rootCauseAnalysis": "String containing analysis of underlying causes",
+      "userImpact": "String containing assessment of how this affects users",
+      "productRecommendations": "String containing specific, actionable recommendations",
+      "supportingEvidence": ["Quote 1", "Quote 2", "Quote 3", "Quote 4", "Quote 5"]
+    }
+
+    ## Analysis Guidelines
+
+    - **Focus on Actionability**: Every insight should connect to potential product improvements
+    - **Prioritize User Voice**: Let user language and expressions guide your understanding
+    - **Be Specific**: Avoid generic observations; provide concrete, detailed insights
+    - **Connect Data to Stories**: Link quantitative patterns to qualitative user experiences
+    - **Think Systemically**: Consider how this friction connects to broader product experience
+    - **Maintain User Empathy**: Understand the emotional and practical impact on users
     
     IMPORTANT: All fields must be simple strings or arrays of strings, not nested objects.
   `;

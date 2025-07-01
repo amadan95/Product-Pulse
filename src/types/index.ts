@@ -36,6 +36,11 @@ export interface AppDetails {
   reviews: Review[];
   ratingCounts: Record<string, number>;
   themes: Theme[];
+  performanceRating?: number;
+  uiRating?: number;
+  stabilityRating?: number;
+  featuresRating?: number;
+  customerSupportRating?: number;
 }
 
 export interface Theme {
